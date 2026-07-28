@@ -1,15 +1,6 @@
-<!--
-This is the BASE CLAUDE.md inherited by every fencedotdev repo via `repo-template`
-(Phase 0 checklist 0.1.2). When each of the 10 product repos is created, its real
-CLAUDE.md = this file + that repo's section from `per-repo-claude-md-supplements.md`,
-inserted where the "## <repo-name> specifics" marker below indicates (0.1.4a).
-Delete this comment block when composing the real file — it's build-time guidance,
-not part of any repo's actual CLAUDE.md.
--->
+# Fence — contracts
 
-# Fence — <repo-name>
-
-<!-- One-sentence bounded-context statement goes here, from the repo's README (0.1.4). -->
+Owns the shared, versioned contracts every other repo imports — the passport, mandate, verify() request, and verify() decision shapes.
 
 Full product brief: `../internal/briefs/260727_fence_id_v1.0.md`
 Build order: `../internal/checklists/fence-build-order.md`
@@ -23,11 +14,38 @@ How we work (stack + process): `../internal/onboarding/fence-team-brief-how-we-w
 
 ---
 
-## <repo-name> specifics
+## contracts specifics
 
-<!-- INSERT REPO SUPPLEMENT HERE (0.1.4a): stack subset, codebase structure, what
-     this repo owns / explicitly does not own, domain vocabulary. Source:
-     `internal/templates/per-repo-claude-md-supplements.md`. -->
+**Type:** Library, no deploy — publishes a versioned package every other repo imports.
+
+**Stack:** TypeScript, Zod (or equivalent) for runtime-validated schemas + inferred types. No framework, no database, no HTTP server.
+
+**Owns:** the four M·1–M·4 shapes from the brief — the passport (SD-JWT-VC payload), the mandate, the `verify()` request, the `verify()` decision. This is the seam every other repo builds against (App. C).
+
+**Does not own:** any business logic, any persistence, any HTTP handling — those all live in the consuming repos.
+
+**Codebase structure:**
+```
+src/
+  passport.ts          # M·1 — passport schema + types
+  mandate.ts           # M·2 — mandate/scope schema + types
+  verify-request.ts     # M·3
+  verify-decision.ts    # M·4
+  index.ts              # public exports
+test/
+  fixtures/              # one fixture instance per shape, used by consumer contract tests
+  no-payment-fields.test.ts   # enforces the no-payment-fields rule (0.5.5)
+  generic-limits.test.ts      # proves payment and API-quota limits share one shape (0.5.3)
+```
+
+**Architecture invariants:**
+- No field anywhere in this package may be payment-shaped (no `funded`, no `payment` action type, no card/wallet reference) until Prong 2 is explicitly and separately scoped. This is enforced by `test/no-payment-fields.test.ts`, not just this instruction.
+- `mandate.constraints.limits` is generic (`{ metric, unit, max }`) — a spend cap and an API quota are the same shape with different `metric` values. Never add a payment-specific limit type.
+- The mandate is *referenced* from the passport (`mandateRef`), never embedded — see M·1's design note.
+- `decision.outcome` (the honest verdict) and `decision.effective` (was it enforced) are separate fields — this is the enforcement-mode seam `grace` slots into later without a schema change.
+- A version bump here must pass the consumer-driven contract test suite against every consuming repo before it publishes (see `fence-checklist-phase-0.md` 0.3.7, 0.5.6).
+
+**Domain vocabulary:** passport, mandate, `verify()`, claims, assurance level, outcome/effective, reason codes, environment (`live`/`test`).
 
 ---
 
@@ -70,7 +88,7 @@ Banned folder names: `utils/`, `helpers/`, `common/`, `shared/`, `core/` — eve
 - Branch protection on `main`: no direct pushes, PR required, CI must pass
 - Signed commits required
 - No credentials in source code — GitHub secret scanning + push protection enabled; a `git-secrets` pre-commit hook blocks known secret patterns before they leave your machine
-- If this repo ever touches the issuer signing key or Sumsub credentials directly, stop — it almost certainly shouldn't. Signing happens only in `issuance`; KYB/KYC vendor calls happen only in `identity-kyb`. See `fence-team-brief-how-we-work.md` §8.
+- If this repo ever touches the issuer signing key or IDV vendor credentials directly, stop — it almost certainly shouldn't. Signing happens only in `issuance`; KYB/KYC vendor calls happen only in `identity-kyb`. See `fence-team-brief-how-we-work.md` §8.
 
 ## Hooks
 

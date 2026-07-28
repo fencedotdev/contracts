@@ -1,5 +1,17 @@
-# repo-template
+# contracts
 
-The shared starting point every `fencedotdev` repo is created from (`Use this template`, Phase 0 checklist 0.1.2). Not a real service — don't deploy this repo itself.
+Owns the shared, versioned contracts every other repo imports — the passport, mandate, verify() request, and verify() decision shapes.
 
-Provides: strict-mode `tsconfig.json`, ESLint (`eslint-plugin-security` + the complexity limits from `CLAUDE.md`), Vitest with 100%-coverage thresholds, a placeholder test so CI never fails on an empty suite, `.gitignore`, `git-secrets` patterns, `CONTRIBUTING.md`, an `.env.example` skeleton, a base CI workflow (`npm audit` → Semgrep → typecheck → lint → test), and a base `CLAUDE.md` every repo extends with its own supplement (`internal/templates/per-repo-claude-md-supplements.md`, composed per-repo in 0.1.4a).
+## Owns
+
+the four M·1–M·4 shapes from the brief — the passport (SD-JWT-VC payload), the mandate, the `verify()` request, the `verify()` decision. This is the seam every other repo builds against (App. C).
+
+## Does not own
+
+any business logic, any persistence, any HTTP handling — those all live in the consuming repos.
+
+## Reference
+
+- Product brief: `internal/briefs/260727_fence_id_v1.0.md`
+- Build order: `internal/checklists/fence-build-order.md`
+- Full architecture detail: this repo's `CLAUDE.md`
