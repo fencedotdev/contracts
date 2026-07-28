@@ -1,0 +1,67 @@
+# Shared .gitignore inherited by every fencedotdev repo via `repo-template`
+# (Phase 0 checklist 0.1.2). Covers both the Next.js repos (console, sandbox,
+# and the six API-routes-only core services) and the library repos (contracts,
+# verifier-sdk) — irrelevant sections (e.g. .next/) are harmless no-ops there.
+
+# Logs
+logs
+*.log
+npm-debug.log*
+
+# Runtime data
+pids
+*.pid
+*.seed
+*.pid.lock
+
+# Coverage
+coverage
+*.lcov
+.nyc_output
+
+# Dependencies
+node_modules/
+
+# TypeScript
+*.tsbuildinfo
+next-env.d.ts
+
+# Optional caches
+.npm
+.eslintcache
+
+# Output of 'npm pack' (relevant for the library repos — contracts, verifier-sdk)
+*.tgz
+
+# dotenv environment variable files — never commit real credentials
+.env
+.env.local
+.env.*.local
+.env.staging
+.env.production
+.env.development
+
+# Kamal secrets files — may contain literal credentials (deployable repos only)
+# .kamal/secrets-common is intentionally committed (references env vars, no real values)
+.kamal/secrets
+.kamal/secrets.*
+
+# Next.js build output (console, sandbox, and the six core-service repos)
+.next
+out
+
+# dist output (library repos — contracts, verifier-sdk)
+dist
+
+# macOS / editor
+.DS_Store
+.vscode-test
+
+# CodeGraph local index — not source code
+.codegraph/
+
+# Playwright (if used by console or sandbox for e2e)
+/test-results/
+/playwright-report/
+/blob-report/
+/playwright/.cache/
