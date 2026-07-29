@@ -14,13 +14,17 @@ on:
 # a real Dockerfile/schema to exist first and get added per-repo once that repo
 # has application code, not at template-creation time.
 #
-# Runs on the self-hosted Hetzner runner pool (inherited from doc-e-sign, Appendix
-# G) — confirm pool capacity/isolation (0.3.10/0.3.10a) before this generates real
-# PR volume. `runs-on` below assumes that pool exists; swap to `ubuntu-latest` if
-# it isn't provisioned yet for this org.
+# Runs on GitHub-hosted ubuntu-latest for now (2026-07-29) — Fence gets its own
+# dedicated, genuinely ephemeral-per-job Hetzner runner pool (0.3.10, decided
+# against sharing doc-e-sign's persistent/non-isolated one — see that item's
+# note), blocked purely on Hetzner capacity for the target box spec. Swap
+# `runs-on` back to `[self-hosted, fencedotdev]` once that pool exists; low
+# CI volume pre-Phase-1 means the GitHub-hosted cost here is negligible in
+# the meantime, and ubuntu-latest's own genuine per-job isolation is strictly
+# safer than the doc-e-sign pool would have been, not just a stopgap.
 jobs:
   ci:
-    runs-on: [self-hosted, fencedotdev]
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
 
