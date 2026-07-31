@@ -24,19 +24,30 @@ How we work (stack + process): `../internal/onboarding/fence-team-brief-how-we-w
 
 **Does not own:** any business logic, any persistence, any HTTP handling — those all live in the consuming repos.
 
-**Codebase structure:**
+**Codebase structure (built 0.5.1–0.5.5; deviates from this doc's original sketch, see note below):**
 ```
 src/
-  passport.ts          # M·1 — passport schema + types
-  mandate.ts           # M·2 — mandate/scope schema + types
-  verify-request.ts     # M·3
-  verify-decision.ts    # M·4
-  index.ts              # public exports
-test/
-  fixtures/              # one fixture instance per shape, used by consumer contract tests
-  no-payment-fields.test.ts   # enforces the no-payment-fields rule (0.5.5)
-  generic-limits.test.ts      # proves payment and API-quota limits share one shape (0.5.3)
+  environment.ts         # live | test — shared by M·1 and M·4
+  assurance-level.ts     # unverified | full — shared by M·1, M·3, M·4
+  passport.ts            # M·1 — passport schema + types
+  mandate.ts             # M·2 — mandate/scope schema + types
+  verify-request.ts      # M·3
+  verify-decision.ts     # M·4 — includes a .refine() enforcing accountableOrigin
+                          # is never true for an unverified-tier decision
+  fixtures.ts            # one canonical instance per shape — imported by this
+                          # package's own tests AND by consumer contract tests
+                          # (0.5.6); exported from index.ts, not test-only
+  index.ts                # public exports
+  __tests__/
+    passport.test.ts / mandate.test.ts / verify-request.test.ts / verify-decision.test.ts
+    no-payment-fields.test.ts   # enforces the no-payment-fields rule (0.5.5) —
+                                  # walks each schema's JSON Schema representation
+                                  # (z.toJSONSchema) checking for banned field names
+    generic-limits.test.ts       # proves payment and API-quota limits share one shape (0.5.3)
+tsconfig.json          # typecheck (includes tests, matches the rest of the workspace)
+tsconfig.build.json     # build only — extends tsconfig.json, excludes *.test.ts
 ```
+**Note on the deviation:** this doc originally sketched a top-level `test/` directory. Built against `vitest.config.ts`'s actual `include: ["src/**/*.test.ts"]` glob instead, colocating tests under `src/__tests__/` — matching every other repo's convention in this workspace, and keeping one test-discovery mechanism rather than two. `fixtures.ts` lives in `src/` and is a real public export (not test-only) specifically because 0.5.6 needs consuming repos to import these fixtures from the published package, which a `.npmignore`'d `test/` directory couldn't provide.
 
 **Architecture invariants:**
 - No field anywhere in this package may be payment-shaped (no `funded`, no `payment` action type, no card/wallet reference) until Prong 2 is explicitly and separately scoped. This is enforced by `test/no-payment-fields.test.ts`, not just this instruction.

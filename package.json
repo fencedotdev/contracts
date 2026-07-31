@@ -1,17 +1,32 @@
 {
-  "name": "@fencedotdev/repo-template",
-  "version": "0.0.0",
-  "private": true,
+  "name": "@fencedotdev/contracts",
+  "version": "0.1.0",
+  "description": "Shared, versioned schemas for Fence's core contracts — the passport, mandate, verify() request, and verify() decision.",
   "type": "module",
   "engines": {
     "node": ">=20"
   },
+  "main": "./dist/index.js",
+  "types": "./dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "import": "./dist/index.js"
+    }
+  },
+  "files": [
+    "dist"
+  ],
+  "publishConfig": {
+    "registry": "https://npm.pkg.github.com"
+  },
   "scripts": {
-    "build": "tsc -p tsconfig.json",
+    "build": "tsc -p tsconfig.build.json",
     "typecheck": "tsc --noEmit",
     "lint": "eslint . --max-warnings=0",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "prepublishOnly": "npm run build"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
@@ -21,5 +36,8 @@
     "typescript": "^5.5.0",
     "typescript-eslint": "^8.65.0",
     "vitest": "^4.0.0"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
   }
 }
