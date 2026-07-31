@@ -113,9 +113,9 @@ jobs:
         run: |
           VERSION=$(node -p "require('./package.json').version")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
-          if npm view "@fencedotdev/contracts@$VERSION" version >/dev/null 2>&1; then
+          if npm view "@fence.dev/contracts@$VERSION" version >/dev/null 2>&1; then
             echo "already_published=true" >> "$GITHUB_OUTPUT"
-            echo "::notice::@fencedotdev/contracts@$VERSION is already published — nothing to do"
+            echo "::notice::@fence.dev/contracts@$VERSION is already published — nothing to do"
           else
             echo "already_published=false" >> "$GITHUB_OUTPUT"
           fi
@@ -133,7 +133,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: contracts-tarball
-          path: fencedotdev-contracts-*.tgz
+          path: fence.dev-contracts-*.tgz
           retention-days: 1
 
   # 0.5.6's gate, run for real: installs the *newly built, not-yet-published*
@@ -184,7 +184,7 @@ jobs:
             exit 0
           fi
           npm ci
-          npm install --no-save "$GITHUB_WORKSPACE"/fencedotdev-contracts-*.tgz
+          npm install --no-save "$GITHUB_WORKSPACE"/fence.dev-contracts-*.tgz
           npx vitest run src/__tests__/contracts.test.ts
 
   publish:
