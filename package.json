@@ -33,7 +33,7 @@
     "@vitest/coverage-v8": "^4.0.0",
     "eslint": "^10.8.0",
     "eslint-plugin-security": "^4.0.1",
-    "typescript": "^5.5.0",
+    "typescript": "^7.0.2",
     "typescript-eslint": "^8.65.0",
     "vitest": "^4.0.0"
   },
