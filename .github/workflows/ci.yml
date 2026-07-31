@@ -57,3 +57,166 @@ jobs:
       # Step 3 (0.3.4): the placeholder test (0.2.3) must pass here.
       - name: Test
         run: npm test -- --coverage
+
+  # 0.3.7 — CI step 5-alt (library repos, merge-to-main only): publish the
+  # package with a version bump, gated on 0.5.6's consumer-driven contract
+  # test suite passing against every consuming repo first — a breaking
+  # schema change must fail here, not surface as a runtime error in
+  # `verification` three repos away. Split into three jobs so the gate is a
+  # real dependency the publish job can't bypass, not just a step ordering
+  # convention within one job.
+  #
+  # Publishes to the PUBLIC npm registry (registry.npmjs.org), not GitHub
+  # Packages — a deliberate choice, decided 2026-07-31 after direct research
+  # ruled out the alternatives: npm's own --provenance flag needs a public
+  # source repo (contracts now is: made public the same day, confirmed clean
+  # history first — no secrets, template scaffolding and this session's
+  # schema code only); GitHub's native artifact attestations need GitHub
+  # Enterprise Cloud for a private repo (fencedotdev is on Team) — moot now
+  # the repo is public, but GitHub Packages' npm registry doesn't document
+  # or appear to support provenance regardless of visibility (npm's own
+  # tooling expects registry-url: registry.npmjs.org specifically). Uses
+  # npm's Trusted Publisher / OIDC flow (GA since mid-2025) — no NPM_TOKEN
+  # stored anywhere; npm exchanges this workflow's GitHub Actions OIDC token
+  # for a short-lived publish credential at publish time, and generates a
+  # provenance attestation automatically as part of that flow. One-time
+  # manual bootstrap was required outside CI (npm's Trusted Publisher config
+  # is set from an already-existing package's own settings page — v0.1.0
+  # itself was published manually to establish the package before Trusted
+  # Publishing could be configured for v0.1.1 onward); see
+  # fence-checklist-phase-0.md 0.3.7 for that trail.
+  build-and-pack:
+    needs: ci
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    runs-on: ubuntu-latest
+    outputs:
+      version: ${{ steps.check.outputs.version }}
+      already_published: ${{ steps.check.outputs.already_published }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      - name: Install dependencies
+        run: npm ci
+
+      # A push to main without a version bump (e.g. a docs-only or handover
+      # change merged alongside a schema PR) is a no-op here, not a failure
+      # — publish only happens when package.json's version isn't on the
+      # registry yet. Public registry, no auth needed just to check.
+      - name: Check whether this version is already published
+        id: check
+        run: |
+          VERSION=$(node -p "require('./package.json').version")
+          echo "version=$VERSION" >> "$GITHUB_OUTPUT"
+          if npm view "@fencedotdev/contracts@$VERSION" version >/dev/null 2>&1; then
+            echo "already_published=true" >> "$GITHUB_OUTPUT"
+            echo "::notice::@fencedotdev/contracts@$VERSION is already published — nothing to do"
+          else
+            echo "already_published=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build
+        if: steps.check.outputs.already_published == 'false'
+        run: npm run build
+
+      - name: Pack
+        if: steps.check.outputs.already_published == 'false'
+        run: npm pack
+
+      - name: Upload the packed tarball for the consumer-gate and publish jobs
+        if: steps.check.outputs.already_published == 'false'
+        uses: actions/upload-artifact@v4
+        with:
+          name: contracts-tarball
+          path: fencedotdev-contracts-*.tgz
+          retention-days: 1
+
+  # 0.5.6's gate, run for real: installs the *newly built, not-yet-published*
+  # tarball into each consuming repo's own checkout and runs that repo's own
+  # consumer contract test against it. fail-fast: false so all seven report
+  # independently rather than the first failure hiding the rest.
+  #
+  # Bootstrap note: none of the seven repos have their 0.5.6 consumer test
+  # merged to main yet as of this workflow's first version (those branches
+  # are held back pending this exact publish, see fence-checklist-phase-0.md
+  # 0.5.6/0.5.7) — each leg below checks for the test file's existence and
+  # skips cleanly (not a failure) if it isn't there yet. This gate starts
+  # doing real verification automatically, with no further changes needed
+  # here, the moment each repo's consumer-test PR merges.
+  verify-consumers:
+    needs: build-and-pack
+    if: needs.build-and-pack.outputs.already_published == 'false'
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        repo:
+          - identity-kyb
+          - issuance
+          - verification
+          - scope-policy
+          - console
+          - verifier-sdk
+          - sandbox
+    steps:
+      - name: Download the packed tarball
+        uses: actions/download-artifact@v4
+        with:
+          name: contracts-tarball
+
+      - name: Checkout ${{ matrix.repo }}
+        uses: actions/checkout@v7
+        with:
+          repository: fencedotdev/${{ matrix.repo }}
+          token: ${{ secrets.CROSS_REPO_READ_TOKEN }}
+          path: consumer
+
+      - name: Run ${{ matrix.repo }}'s consumer contract test against the new build
+        working-directory: consumer
+        run: |
+          if [ ! -f src/__tests__/contracts.test.ts ]; then
+            echo "::notice::${{ matrix.repo }} has no consumer contract test on main yet (0.5.6 not merged there) — nothing to verify"
+            exit 0
+          fi
+          npm ci
+          npm install --no-save "$GITHUB_WORKSPACE"/fencedotdev-contracts-*.tgz
+          npx vitest run src/__tests__/contracts.test.ts
+
+  publish:
+    needs: [build-and-pack, verify-consumers]
+    if: needs.build-and-pack.outputs.already_published == 'false' && needs.verify-consumers.result == 'success'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write # required for npm's OIDC Trusted Publisher exchange + provenance
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 20
+          cache: npm
+          registry-url: https://registry.npmjs.org
+
+      # npm's OIDC Trusted Publisher exchange needs npm >= 11.5.1; Node 20's
+      # bundled npm is older than that.
+      - name: Update npm
+        run: npm install -g npm@latest
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Build
+        run: npm run build
+
+      # No NPM_TOKEN: npm exchanges this job's GitHub Actions OIDC token for
+      # a short-lived publish credential via the Trusted Publisher config on
+      # npmjs.com (fence-checklist-phase-0.md 0.3.7), and generates the
+      # provenance attestation automatically as part of the same flow.
+      - name: Publish to npm
+        run: npm publish --provenance
