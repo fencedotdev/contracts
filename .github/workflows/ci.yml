@@ -30,7 +30,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
 
       - name: Install dependencies
@@ -97,7 +97,7 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
           registry-url: https://registry.npmjs.org
 
@@ -199,12 +199,23 @@ jobs:
 
       - uses: actions/setup-node@v7
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
           registry-url: https://registry.npmjs.org
 
-      # npm's OIDC Trusted Publisher exchange needs npm >= 11.5.1; Node 20's
-      # bundled npm is older than that.
+      # npm's OIDC Trusted Publisher exchange needs npm >= 11.5.1. Node 24's
+      # bundled npm already clears that, but this step keeps the publish
+      # job on npm's actual latest rather than whatever ships with the
+      # pinned Node version. Bumped from Node 20 (2026-08-03): `npm@latest`
+      # is a floating target, and it silently crossed a new engine
+      # requirement (`^22.22.2 || ^24.15.0 || >=26.0.0`) that Node 20 no
+      # longer satisfies — this step started failing on main with no
+      # workflow change of our own, taking `npm publish` down with it
+      # (three downstream steps skipped as a result). Node 24 clears the
+      # new floor with margin; if `npm@latest` drifts past Node 24 again,
+      # pinning to a specific compatible npm version (e.g. `npm@11`)
+      # instead of chasing `@latest` would be more durable than repeating
+      # this bump indefinitely.
       - name: Update npm
         run: npm install -g npm@latest
 
