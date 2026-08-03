@@ -1,5 +1,5 @@
 export type { AssuranceLevel } from "./assurance-level.js";
-export { AssuranceLevelSchema } from "./assurance-level.js";
+export { AssuranceLevelCopy, AssuranceLevelSchema } from "./assurance-level.js";
 export type { Environment } from "./environment.js";
 export { EnvironmentSchema } from "./environment.js";
 export {
