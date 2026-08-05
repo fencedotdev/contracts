@@ -14,17 +14,18 @@ on:
 # a real Dockerfile/schema to exist first and get added per-repo once that repo
 # has application code, not at template-creation time.
 #
-# Runs on GitHub-hosted ubuntu-latest for now (2026-07-29) — Fence gets its own
-# dedicated, genuinely ephemeral-per-job Hetzner runner pool (0.3.10, decided
-# against sharing doc-e-sign's persistent/non-isolated one — see that item's
-# note), blocked purely on Hetzner capacity for the target box spec. Swap
-# `runs-on` back to `[self-hosted, fencedotdev]` once that pool exists; low
-# CI volume pre-Phase-1 means the GitHub-hosted cost here is negligible in
-# the meantime, and ubuntu-latest's own genuine per-job isolation is strictly
-# safer than the doc-e-sign pool would have been, not just a stopgap.
+# Runs on Fence's own self-hosted runner pool (0.3.10) as of 2026-08-04 — 3x
+# Hetzner CX23 boxes (`hel1`), each running a genuinely ephemeral,
+# GitHub-App-authenticated container (`myoung34/github-runner`, EPHEMERAL=true
+# + Docker restart-always so a fresh container re-registers after every job),
+# labeled `fence-runner`, org-scoped against `fencedotdev` so all 10 repos
+# share one pool. No cross-job filesystem leakage, unlike doc-e-sign's
+# persistent systemd-installed runners — see 0.3.10a for the isolation
+# rationale that made sharing this pool across identity-kyb/issuance/
+# verification (the KMS/DB-credential-holding repos) acceptable.
 jobs:
   ci:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, fence-runner]
     steps:
       - uses: actions/checkout@v7
 
@@ -88,7 +89,7 @@ jobs:
   build-and-pack:
     needs: ci
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, fence-runner]
     outputs:
       version: ${{ steps.check.outputs.version }}
       already_published: ${{ steps.check.outputs.already_published }}
@@ -151,7 +152,7 @@ jobs:
   verify-consumers:
     needs: build-and-pack
     if: needs.build-and-pack.outputs.already_published == 'false'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, fence-runner]
     strategy:
       fail-fast: false
       matrix:
@@ -190,7 +191,7 @@ jobs:
   publish:
     needs: [build-and-pack, verify-consumers]
     if: needs.build-and-pack.outputs.already_published == 'false' && needs.verify-consumers.result == 'success'
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, fence-runner]
     permissions:
       contents: read
       id-token: write # required for npm's OIDC Trusted Publisher exchange + provenance
