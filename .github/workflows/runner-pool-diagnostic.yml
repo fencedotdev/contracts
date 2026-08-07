@@ -1,0 +1,11 @@
+name: Runner Pool Diagnostic
+
+on:
+  pull_request:
+    branches: [main]
+
+jobs:
+  ping:
+    runs-on: [self-hosted, fence-runner]
+    steps:
+      - run: echo "reached a self-hosted runner"
