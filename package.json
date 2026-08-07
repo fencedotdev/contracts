@@ -4,7 +4,7 @@
   "description": "Shared, versioned schemas for Fence's core contracts — the passport, mandate, verify() request, and verify() decision.",
   "type": "module",
   "engines": {
-    "node": ">=20"
+    "node": ">=24"
   },
   "main": "./dist/index.js",
   "types": "./dist/index.d.ts",
