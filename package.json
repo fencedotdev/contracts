@@ -1,7 +1,7 @@
 {
   "name": "@fence.dev/contracts",
   "version": "0.1.1",
-  "description": "Shared, versioned schemas for Fence's core contracts — the passport, mandate, verify() request, and verify() decision.",
+  "description": "Shared, versioned schemas for Fence's core contracts \u2014 the passport, mandate, verify() request, and verify() decision.",
   "type": "module",
   "engines": {
     "node": ">=24"
@@ -30,13 +30,15 @@
     "lint": "eslint . --max-warnings=0",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "npm run build",
+    "prepare": "husky"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
     "@vitest/coverage-v8": "^4.0.0",
     "eslint": "^10.8.0",
     "eslint-plugin-security": "^4.0.1",
+    "husky": "^9.1.7",
     "typescript": "^5.5.0",
     "typescript-eslint": "^8.65.0",
     "vitest": "^4.0.0"
