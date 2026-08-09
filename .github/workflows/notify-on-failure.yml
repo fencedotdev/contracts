@@ -1,0 +1,35 @@
+name: Notify on main-branch failure
+
+# Push-triggered CI/deploy failures on main are otherwise invisible unless
+# someone manually opens the Actions tab — exactly how sandbox's
+# deploy-staging sat broken after its Node 24 PR merged. Fires on either
+# workflow's completion; deploy-staging's own failure counts too, since
+# it's a job inside the "CI" workflow run, not a separate one.
+
+on:
+  workflow_run:
+    workflows: ["CI", "Deploy production"]
+    types: [completed]
+    branches: [main]
+
+jobs:
+  notify:
+    if: github.event.workflow_run.conclusion == 'failure'
+    runs-on: ubuntu-latest
+    steps:
+      - name: Post to Discord
+        env:
+          DISCORD_WEBHOOK_URL: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          REPO: ${{ github.repository }}
+          WORKFLOW_NAME: ${{ github.event.workflow_run.name }}
+          RUN_URL: ${{ github.event.workflow_run.html_url }}
+        run: |
+          if [ -z "$DISCORD_WEBHOOK_URL" ]; then
+            echo "DISCORD_WEBHOOK_URL not set, skipping notification"
+            exit 0
+          fi
+          content=$(printf '🔴 **%s** failed on `main` in **%s**\n%s' "$WORKFLOW_NAME" "$REPO" "$RUN_URL")
+          payload=$(python3 -c "import json,sys; print(json.dumps({'content': sys.argv[1]}))" "$content")
+          curl -sf -X POST "$DISCORD_WEBHOOK_URL" \
+            -H "Content-Type: application/json" \
+            -d "$payload"

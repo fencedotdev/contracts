@@ -1,0 +1,53 @@
+name: Prune stale branches
+
+# Weekly cleanup for branches whose PR has already merged or was closed
+# without merging 30+ days ago — e.g. contracts/ci/self-hosted-runner-pool,
+# closed 2026-08-08 without merging, would otherwise sit forever. Verifies
+# against GitHub's own PR record for each branch (not local git ancestry —
+# squash-merges break ancestry checks, see repo-template's own
+# scripts/prune-merged-branches.py for the same reasoning applied locally).
+# A branch with no associated PR at all is left alone regardless of age —
+# it might be real not-yet-opened WIP, not an abandoned attempt.
+
+on:
+  schedule:
+    - cron: "0 6 * * 1"
+  workflow_dispatch: {}
+
+jobs:
+  prune:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      pull-requests: read
+    steps:
+      - name: Delete branches whose PR merged, or closed 30+ days ago
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -e
+          repo="${{ github.repository }}"
+          default_branch=$(gh api "repos/$repo" --jq .default_branch)
+          cutoff=$(date -u -d '30 days ago' +%Y-%m-%dT%H:%M:%SZ)
+
+          gh api "repos/$repo/branches" --paginate --jq '.[].name' | while read -r branch; do
+            [ "$branch" = "$default_branch" ] && continue
+
+            pr_json=$(gh pr list --repo "$repo" --head "$branch" --state all --json state,mergedAt,closedAt --limit 1)
+            [ "$pr_json" = "[]" ] && continue
+
+            state=$(echo "$pr_json" | jq -r '.[0].state')
+            closed_at=$(echo "$pr_json" | jq -r '.[0].closedAt')
+
+            should_delete=false
+            if [ "$state" = "MERGED" ]; then
+              should_delete=true
+            elif [ "$state" = "CLOSED" ] && [ "$closed_at" != "null" ] && [[ "$closed_at" < "$cutoff" ]]; then
+              should_delete=true
+            fi
+
+            if [ "$should_delete" = "true" ]; then
+              echo "Deleting stale branch: $branch (PR state: $state, closed: $closed_at)"
+              gh api -X DELETE "repos/$repo/git/refs/heads/$branch" 2>&1 || echo "  (already gone)"
+            fi
+          done

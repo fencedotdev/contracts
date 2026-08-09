@@ -4,7 +4,28 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      # Batches every non-major bump into one PR/week instead of one PR per
+      # package — the noise problem was the sheer count of individually
+      # trivial patch/minor bumps, not majors specifically.
+      minor-and-patch:
+        update-types:
+          - "minor"
+          - "patch"
+    ignore:
+      # typescript-eslint@8.x's own peer range (`typescript >=4.8.4 <6.1.0`)
+      # rejects anything newer via ERESOLVE — Dependabot re-proposes this
+      # exact unmergeable bump every week regardless, since it has no way to
+      # know the peer conflict blocks it. Revisit once typescript-eslint
+      # ships support for newer TypeScript majors.
+      - dependency-name: "typescript"
+        update-types: ["version-update:semver-major"]
   - package-ecosystem: "github-actions"
     directory: "/"
     schedule:
       interval: "weekly"
+    groups:
+      actions:
+        update-types:
+          - "minor"
+          - "patch"
