@@ -68,7 +68,7 @@ export const mandateFixture: Mandate = {
 export const verifyRequestFixture: VerifyRequest = {
   presentation: {
     passport: "<VC-JWT>",
-    requestSignature: { signatureInput: "sig1=(\"@method\" \"@path\");created=1785400000", signature: "sig1=:base64signature:" },
+    requestSignature: { signature: "sig1=:base64signature:" },
   },
   action: {
     type: "purchase",

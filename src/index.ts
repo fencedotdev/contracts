@@ -14,5 +14,5 @@ export type { Passport } from "./passport.js";
 export { PassportSchema } from "./passport.js";
 export type { VerifyDecision } from "./verify-decision.js";
 export { VerifyDecisionSchema } from "./verify-decision.js";
-export type { VerifyRequest } from "./verify-request.js";
-export { VerifyRequestSchema } from "./verify-request.js";
+export type { Action, VerifyRequest } from "./verify-request.js";
+export { canonicalizeAction, VerifyRequestSchema } from "./verify-request.js";
