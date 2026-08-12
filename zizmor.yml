@@ -1,0 +1,56 @@
+# Config for zizmor (GitHub Actions security static analysis), added
+# 2026-08-12 after Aikido flagged unpinned actions and GitHub Actions
+# script injection — both now fixed everywhere, and this tool exists so a
+# regression of either (or anything else zizmor checks) fails CI
+# immediately instead of waiting for the next external scan.
+#
+# Each entry below is a specific, already-triaged finding, scoped to its
+# exact file:line — not a blanket per-rule suppression — so this config
+# doesn't quietly swallow a *new* finding of the same rule somewhere else.
+# Same discipline as docs/audit-ci.jsonc's allowlist.
+rules:
+  artipacked:
+    ignore:
+      # actions/checkout not setting persist-credentials: false, across
+      # this file's four jobs (ci, build-and-pack, verify-consumers,
+      # publish). Low exposure: none of these jobs upload artifacts or
+      # run untrusted code that could exfiltrate the persisted credential.
+      - ci.yml:29
+      - ci.yml:116
+      - ci.yml:192
+      - ci.yml:218
+  excessive-permissions:
+    ignore:
+      # No explicit `permissions:` block, at the workflow level or on
+      # four individual jobs. Worth tightening eventually, not a
+      # regression of anything this tool was added to catch.
+      - ci.yml:1
+      - ci.yml:26
+      - ci.yml:108
+      - ci.yml:171
+      - notify-on-failure.yml:16
+  archived-uses:
+    ignore:
+      # semgrep/semgrep-action is archived/deprecated upstream (confirmed
+      # 2026-08-12: archived, last pushed 2024-04-09, repo description
+      # points to returntocorp/semgrep instead). Tracked as its own
+      # migration, not fixed here.
+      - ci.yml:46
+  adhoc-packages:
+    ignore:
+      # npm pack (via `npm run pack` or similar) outside a lockfile-pinned
+      # install — this is packing this repo's own already-built output,
+      # not installing a third-party package ad hoc.
+      - ci.yml:240
+  dangerous-triggers:
+    ignore:
+      # notify-on-failure.yml's workflow_run trigger — zizmor flags
+      # workflow_run as "almost always used insecurely" (typically a
+      # fork-PR privilege-escalation vector: the triggered workflow runs
+      # with the base repo's permissions/secrets against attacker-
+      # influenced content). This usage only reads the completed run's
+      # own conclusion/name to post a Discord notification — no checkout
+      # of the triggering ref, no execution of anything from it. Revisit
+      # if this workflow ever starts checking out or running the
+      # triggering commit's content.
+      - notify-on-failure.yml:9
