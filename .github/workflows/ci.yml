@@ -47,6 +47,26 @@ jobs:
         with:
           config: p/default
 
+      # Added 2026-08-12 after Aikido flagged unpinned actions and GitHub
+      # Actions script injection (both fixed everywhere) — zizmor is a
+      # purpose-built static analyzer for GitHub Actions workflows that
+      # catches both classes automatically, plus several others. A plain
+      # step here, not a separate job — unlike the self-hosted-pool repos,
+      # this job already runs on ubuntu-latest, so neither the
+      # Docker-in-Docker mount issue nor the glibc mismatch that forced a
+      # separate job elsewhere applies here. advanced-security: false
+      # avoids needing security-events: write; collect: workflows scopes
+      # this to .github/workflows/ specifically (the default also picks up
+      # dependabot.yml, untriaged and out of scope for what this catches).
+      # zizmor.yml (repo root) suppresses the specific, already-triaged
+      # findings that predate this step.
+      - name: zizmor
+        uses: zizmorcore/zizmor-action@3dc1ecc9bcb9e94e9b2c709687979e1298497054 # v0.6.2
+        with:
+          collect: workflows
+          advanced-security: "false"
+          annotations: "true"
+
       # Step 2 (0.3.3): fail on any type error.
       - name: Type check
         run: npx tsc --noEmit
