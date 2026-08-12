@@ -26,9 +26,9 @@ jobs:
   ci:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           cache: npm
@@ -43,7 +43,7 @@ jobs:
       # New, v1.7 (0.3.2a): Semgrep SAST — named in the stack (App. G) but previously
       # never actually wired into CI.
       - name: Semgrep
-        uses: semgrep/semgrep-action@v1
+        uses: semgrep/semgrep-action@713efdd345f3035192eaa63f56867b88e63e4e5d # v1
         with:
           config: p/default
 
@@ -93,9 +93,9 @@ jobs:
       version: ${{ steps.check.outputs.version }}
       already_published: ${{ steps.check.outputs.already_published }}
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           cache: npm
@@ -130,7 +130,7 @@ jobs:
 
       - name: Upload the packed tarball for the consumer-gate and publish jobs
         if: steps.check.outputs.already_published == 'false'
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
         with:
           name: contracts-tarball
           path: fence.dev-contracts-*.tgz
@@ -165,12 +165,12 @@ jobs:
           - sandbox
     steps:
       - name: Download the packed tarball
-        uses: actions/download-artifact@v8
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
         with:
           name: contracts-tarball
 
       - name: Checkout ${{ matrix.repo }}
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           repository: fencedotdev/${{ matrix.repo }}
           token: ${{ secrets.CROSS_REPO_READ_TOKEN }}
@@ -195,9 +195,9 @@ jobs:
       contents: read
       id-token: write # required for npm's OIDC Trusted Publisher exchange + provenance
     steps:
-      - uses: actions/checkout@v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
 
-      - uses: actions/setup-node@v7
+      - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
           node-version: 24
           cache: npm
