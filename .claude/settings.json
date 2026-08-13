@@ -4,6 +4,9 @@
     "fileExtensions": ["ts", "tsx"],
     "rulesFile": ".claude/automatic-code-review/rules.md"
   },
+  "taskCheck": {
+    "enabled": true
+  },
   "hooks": {
     "PostToolUse": [
       {
@@ -12,6 +15,10 @@
           {
             "type": "command",
             "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/tools/automatic-code-review.sh log"
+          },
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/tools/task-check.sh log"
           }
         ]
       }
@@ -33,6 +40,10 @@
           {
             "type": "command",
             "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/tools/automatic-code-review.sh review"
+          },
+          {
+            "type": "command",
+            "command": "$CLAUDE_PROJECT_DIR/.claude/hooks/tools/task-check.sh check"
           }
         ]
       }
