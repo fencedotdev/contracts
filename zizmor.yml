@@ -15,33 +15,44 @@ rules:
       # this file's four jobs (ci, build-and-pack, verify-consumers,
       # publish). Low exposure: none of these jobs upload artifacts or
       # run untrusted code that could exfiltrate the persisted credential.
+      #
+      # Line numbers shifted 2026-08-13 when the Semgrep step (old
+      # lines 41-51) was migrated off the archived semgrep-action to the
+      # CLI — everything from old line 52 on moved down by 30 lines.
+      # Recomputed from the exact diff, not by re-guessing off a fresh
+      # scan (that path is a trap: a finding not appearing in a scan run
+      # against the *old*, now-mismatched zizmor.yml just means it's
+      # still being suppressed by its stale entry, not that the rule
+      # stopped applying — confirmed the hard way while writing this).
       - ci.yml:29
-      - ci.yml:116
-      - ci.yml:192
-      - ci.yml:218
+      - ci.yml:146
+      - ci.yml:222
+      - ci.yml:248
   excessive-permissions:
     ignore:
       # No explicit `permissions:` block, at the workflow level or on
       # four individual jobs. Worth tightening eventually, not a
-      # regression of anything this tool was added to catch.
+      # regression of anything this tool was added to catch. Line numbers
+      # shifted 2026-08-13 — see the artipacked note above.
       - ci.yml:1
       - ci.yml:26
-      - ci.yml:108
-      - ci.yml:171
+      - ci.yml:138
+      - ci.yml:201
       - notify-on-failure.yml:16
-  archived-uses:
-    ignore:
-      # semgrep/semgrep-action is archived/deprecated upstream (confirmed
-      # 2026-08-12: archived, last pushed 2024-04-09, repo description
-      # points to returntocorp/semgrep instead). Tracked as its own
-      # migration, not fixed here.
-      - ci.yml:46
   adhoc-packages:
     ignore:
-      # npm pack (via `npm run pack` or similar) outside a lockfile-pinned
-      # install — this is packing this repo's own already-built output,
-      # not installing a third-party package ad hoc.
-      - ci.yml:240
+      # publish job: `npm install -g npm@latest`, outside a lockfile-
+      # pinned install — deliberate, not a regression (see that step's
+      # own comment: npm's OIDC Trusted Publisher flow needs a recent
+      # npm, and the bundled Node version has drifted behind npm's engine
+      # requirement before). A genuine, separately-worth-fixing gap the
+      # step's own comment already names — pin to a specific npm major
+      # (e.g. npm@11) instead of chasing @latest — but that's a change to
+      # the live publish pipeline, out of scope here. Line number shifted
+      # 2026-08-13 (was ci.yml:240) — see the artipacked note above; the
+      # previous comment here ("npm pack... packing this repo's own
+      # output") described the wrong step entirely, corrected now.
+      - ci.yml:270
   dangerous-triggers:
     ignore:
       # notify-on-failure.yml's workflow_run trigger — zizmor flags
