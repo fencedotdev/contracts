@@ -41,11 +41,41 @@ jobs:
         run: npm audit --audit-level=high
 
       # New, v1.7 (0.3.2a): Semgrep SAST — named in the stack (App. G) but previously
-      # never actually wired into CI.
-      - name: Semgrep
-        uses: semgrep/semgrep-action@713efdd345f3035192eaa63f56867b88e63e4e5d # v1
+      # never actually wired into CI. semgrep/semgrep-action itself has been
+      # archived/deprecated upstream since 2024-04-09 (checklist 1.11.18/1.11.20)
+      # — migrated to the plain CLI. A plain step here, not a separate job —
+      # unlike the self-hosted-pool repos, this job already runs on
+      # ubuntu-latest, so the glibc mismatch that forced a separate job
+      # elsewhere (semgrep's Linux wheels require manylinux_2_34, confirmed
+      # against the real self-hosted runner) doesn't apply here — same
+      # reasoning as the zizmor step below.
+      #
+      # Unauthenticated (no Semgrep AppSec Platform account/SEMGREP_APP_TOKEN
+      # in this workspace): `semgrep scan --config p/default --error` is the
+      # documented Community Edition path
+      # (docs.semgrep.dev/semgrep-ci/sample-ci-configs), deliberately NOT
+      # `--config auto`, which has a confirmed "requires login" bug on recent
+      # CLI versions (semgrep/semgrep#10734) that `p/default` (a fixed named
+      # ruleset, not the login-gated auto-detection feature) sidesteps
+      # entirely. `--error` is required for findings to actually fail the
+      # build — confirmed directly: `semgrep scan --config p/default` alone
+      # exits 0 even with findings.
+      #
+      # Pinned via .github/semgrep/requirements.txt, not a Docker image
+      # digest — confirmed Dependabot's github-actions ecosystem does not
+      # track image references inside a job's `container:` key or a step's
+      # `uses: docker://...` (dependabot-core#5819, still open), so a Docker
+      # pin here would go stale silently, unlike every other pin in this
+      # file. A `pip`-ecosystem dependabot.yml entry keeps this one
+      # genuinely auto-updated the same way.
+      - uses: actions/setup-python@5fda3b95a4ea91299a34e894583c3862153e4b97 # v7.0.0
         with:
-          config: p/default
+          python-version: "3.12"
+
+      - name: Semgrep
+        run: |
+          pip install --quiet -r .github/semgrep/requirements.txt
+          semgrep scan --config p/default --error
 
       # Added 2026-08-12 after Aikido flagged unpinned actions and GitHub
       # Actions script injection (both fixed everywhere) — zizmor is a

@@ -4,6 +4,8 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7
     groups:
       # Batches every non-major bump into one PR/week instead of one PR per
       # package — the noise problem was the sheer count of individually
@@ -24,8 +26,20 @@ updates:
     directory: "/"
     schedule:
       interval: "weekly"
+    cooldown:
+      default-days: 7
     groups:
       actions:
         update-types:
           - "minor"
           - "patch"
+  # Tracks .github/semgrep/requirements.txt — Dependabot's github-actions
+  # ecosystem can't see a Docker-image pin inside a workflow step, so the
+  # Semgrep CLI is pinned via pip instead specifically so this entry can
+  # keep it updated (see ci.yml's Semgrep step comment).
+  - package-ecosystem: "pip"
+    directory: "/.github/semgrep"
+    schedule:
+      interval: "weekly"
+    cooldown:
+      default-days: 7
