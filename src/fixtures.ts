@@ -1,12 +1,15 @@
 import type { Mandate } from "./mandate.js";
 import type { Passport } from "./passport.js";
+import type { BitstringStatusListCredential } from "./status-list.js";
 import type { VerifyDecision } from "./verify-decision.js";
 import type { VerifyRequest } from "./verify-request.js";
 
-// One canonical, schema-valid instance per M·1–M·4 shape — used by this
-// package's own tests and, per 0.5.6, by every consuming repo's contract
-// test to confirm it can still parse a real instance of what it consumes.
-// Kept in sync with the brief's own worked examples (Appendix M).
+// One canonical, schema-valid instance per shape this package owns — used
+// by this package's own tests and, per 0.5.6, by every consuming repo's
+// contract test to confirm it can still parse a real instance of what it
+// consumes. The M·1–M·4 fixtures are kept in sync with the brief's own
+// worked examples (Appendix M); statusListCredentialFixture is not one of
+// M·1–M·4 (see internal/briefs/260814_status-list-freshness-policy-pull-forward.md).
 
 export const passportFixture: Passport = {
   "@context": ["https://www.w3.org/ns/credentials/v2", "https://fence.dev/ctx/v1"],
@@ -63,6 +66,21 @@ export const mandateFixture: Mandate = {
     destinations: { allow: ["GB"], deny: [] },
     counterparties: { allow: [], deny: [] },
   },
+};
+
+export const statusListCredentialFixture: BitstringStatusListCredential = {
+  "@context": ["https://www.w3.org/ns/credentials/v2", "https://fence.dev/ctx/v1"],
+  type: ["VerifiableCredential", "BitstringStatusListCredential"],
+  issuer: "did:web:fence.dev",
+  validFrom: "2026-08-14T00:00:00Z",
+  credentialSubject: {
+    id: "https://api-scope.fence.dev/api/status/live",
+    type: "BitstringStatusList",
+    statusPurpose: "revocation",
+    encodedList: "uH4sIAAAAAAAAA-3BAQEAAACCIP4M6Q3wAAAAAAAAAAAAAAAAAAAAAAAAAA",
+    ttl: 900,
+  },
+  proof: { type: "JsonWebSignature2020", jws: "base64url-encoded-jws" },
 };
 
 export const verifyRequestFixture: VerifyRequest = {

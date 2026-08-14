@@ -1,6 +1,6 @@
 {
   "name": "@fence.dev/contracts",
-  "version": "0.2.0",
+  "version": "0.3.0",
   "description": "Shared, versioned schemas for Fence's core contracts \u2014 the passport, mandate, verify() request, and verify() decision.",
   "type": "module",
   "engines": {

@@ -5,6 +5,7 @@ export { EnvironmentSchema } from "./environment.js";
 export {
   mandateFixture,
   passportFixture,
+  statusListCredentialFixture,
   verifyDecisionFixture,
   verifyRequestFixture,
 } from "./fixtures.js";
@@ -12,6 +13,8 @@ export type { Mandate } from "./mandate.js";
 export { MandateSchema } from "./mandate.js";
 export type { Passport } from "./passport.js";
 export { PassportSchema } from "./passport.js";
+export type { BitstringStatusListCredential } from "./status-list.js";
+export { BitstringStatusListCredentialSchema, canonicalizeStatusList } from "./status-list.js";
 export type { VerifyDecision } from "./verify-decision.js";
 export { VerifyDecisionSchema } from "./verify-decision.js";
 export type { Action, VerifyRequest } from "./verify-request.js";
