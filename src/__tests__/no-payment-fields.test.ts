@@ -2,6 +2,7 @@ import { z } from "zod";
 import { describe, expect, it } from "vitest";
 import { MandateSchema } from "../mandate.js";
 import { PassportSchema } from "../passport.js";
+import { BitstringStatusListCredentialSchema } from "../status-list.js";
 import { VerifyDecisionSchema } from "../verify-decision.js";
 import { VerifyRequestSchema } from "../verify-request.js";
 
@@ -56,6 +57,7 @@ const ALL_SCHEMAS = {
   mandate: MandateSchema,
   verifyRequest: VerifyRequestSchema,
   verifyDecision: VerifyDecisionSchema,
+  statusListCredential: BitstringStatusListCredentialSchema,
 } as const;
 
 describe("no payment-shaped fields exist anywhere in the four contract shapes", () => {
