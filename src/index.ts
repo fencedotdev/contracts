@@ -17,6 +17,6 @@ export { PassportSchema } from "./passport.js";
 export type { BitstringStatusListCredential } from "./status-list.js";
 export { BitstringStatusListCredentialSchema, canonicalizeStatusList } from "./status-list.js";
 export type { VerifyDecision } from "./verify-decision.js";
-export { VerifyDecisionSchema } from "./verify-decision.js";
+export { VerifyDecisionModeSchema, VerifyDecisionOutcomeSchema, VerifyDecisionSchema } from "./verify-decision.js";
 export type { Action, VerifyRequest } from "./verify-request.js";
 export { canonicalizeAction, VerifyRequestSchema } from "./verify-request.js";
