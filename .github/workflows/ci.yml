@@ -99,6 +99,21 @@ jobs:
           advanced-security: "false"
           annotations: "true"
 
+      # Build every package first — added 2026-08-21 when
+      # credential-verification's typecheck failed on a genuinely clean
+      # checkout (reproduced locally via `npm ci` into a fresh clone; a
+      # locally-built workspace masked it, since a stale dist/ from an
+      # earlier build satisfied module resolution). A package that
+      # depends on another workspace package (credential-verification on
+      # contracts) resolves its types via the dependency's own
+      # package.json "types" field, i.e. its built dist/index.d.ts — not
+      # TS project references or source paths — so that dependency must
+      # already be built before typecheck can resolve it. This will bite
+      # any future package with an intra-monorepo dependency the same
+      # way, not just this one pair.
+      - name: Build
+        run: npm run build
+
       # Step 2 (0.3.3): fail on any type error. Delegates to each package's
       # own typecheck script (npm workspaces) — this repo restructured
       # 2026-08-21 from a single package at the repo root into
