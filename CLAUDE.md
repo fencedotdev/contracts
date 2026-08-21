@@ -30,6 +30,12 @@ packages/
                           # mandate, verify() request, verify() decision.
                           # This is the seam every other repo builds
                           # against (App. C).
+  credential-verification/ # @fence.dev/credential-verification — did:web
+                          # passport-signature verification + offline
+                          # revocation-status checking, ported from
+                          # verification's own internal copy (2026-08-21).
+                          # No consumer-verification gate yet (no merged
+                          # consuming repo yet) — see its own package.json.
 tsconfig.base.json         # shared compiler options every package's own
                           # tsconfig.json extends
 eslint.config.mjs          # shared lint config, globs across packages/*/src
@@ -38,7 +44,7 @@ vitest.config.ts           # shared test config, same glob
 
 **Does not own:** any business logic, any persistence, any HTTP handling — those all live in the consuming repos.
 
-**Publishing**: the public npm registry (`registry.npmjs.org`), via npm's Trusted Publisher/OIDC flow — no stored `NPM_TOKEN`. See `.github/workflows/ci.yml`'s own header comments for the full mechanism and for `contracts`' consumer-verification gate (0.5.6), which a new package here should get too once it has real downstream consumers with their own contract tests — until then, a simpler ungated publish path is fine, matching how `credential-verification` starts out.
+**Publishing**: the public npm registry (`registry.npmjs.org`), via npm's Trusted Publisher/OIDC flow — no stored `NPM_TOKEN`. See `.github/workflows/ci.yml`'s own header comments for the full mechanism and for `contracts`' consumer-verification gate (0.5.6). `credential-verification` uses a simpler, ungated publish path (its own job, `publish-credential-verification`) — add the same consumer-verification gate once it has a real downstream consumer with its own contract test, don't leave it ungated out of inertia. Every new package's very first version must be published manually (an authenticated human `npm publish`, with 2FA) before npm's Trusted Publisher flow can take over for later versions — Trusted Publisher can only be configured against a package that already exists on the registry (`contracts`' own 0.3.7 history, repeated for `credential-verification`'s v0.1.0).
 
 **Architecture invariants (per `contracts` specifically):**
 - No field anywhere in `contracts` may be payment-shaped (no `funded`, no `payment` action type, no card/wallet reference) until Prong 2 is explicitly and separately scoped. Enforced by `packages/contracts/src/__tests__/no-payment-fields.test.ts`, not just this instruction.
@@ -46,6 +52,11 @@ vitest.config.ts           # shared test config, same glob
 - The mandate is *referenced* from the passport (`mandateRef`), never embedded — see M·1's design note.
 - `decision.outcome` (the honest verdict) and `decision.effective` (was it enforced) are separate fields — this is the enforcement-mode seam `grace` slots into later without a schema change.
 - A version bump to `contracts` must pass the consumer-driven contract test suite against every consuming repo before it publishes (see `fence-checklist-phase-0.md` 0.3.7, 0.5.6).
+
+**Architecture invariants (per `credential-verification` specifically):**
+- Fails closed on every failure mode (network error, malformed document, wrong key, tampered payload, wrong algorithm) — never throws, always resolves to `false`/`unavailable`. Preserve this discipline; a relying party depending on this package for an audit trail needs one honest caller-visible signal, not a mix of thrown errors and boolean returns.
+- `live`/`test` resolve to genuinely different did:web hosts (`fence.dev` / `sandbox.fence.dev`), never the same document with a different key selected — always take the environment as an explicit caller argument, never infer it from a token's own self-asserted `iss`/`issuer` claim (that claim is still cross-checked, just never trusted as the source of truth for which host to resolve).
+- `checkOfflineRevocationStatus`'s 500ms per-fetch timeout is deliberate — matched to Fence's own verify() hot-path latency budget, the one real caller this was tuned for. Don't loosen it for test convenience; a caller wanting a longer budget wraps this function in its own retry/timeout logic instead (see the cross-repo test's own retry loop for the pattern).
 
 **Domain vocabulary:** passport, mandate, `verify()`, claims, assurance level, outcome/effective, reason codes, environment (`live`/`test`).
 
