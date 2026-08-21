@@ -10,10 +10,21 @@ import { EnvironmentSchema } from "./environment.js";
 // outcome (the honest verdict) and effective (was it enforced) are kept
 // separate — this is the enforcement-mode seam grace slots into later
 // (effective:false plus a graceUntil deadline), with no new response shape.
+//
+// Exported (not inlined into DecisionBodySchema below) so a consuming
+// repo whose own DB enum must match these values exactly (e.g.
+// identity-kyb's verify_decisions.outcome/.mode Postgres enums) can
+// import the real source of truth and derive its own test expectation
+// from it, rather than hardcoding a second copy that could silently
+// drift out of sync. Same "export the shared primitive" precedent as
+// AssuranceLevelSchema/EnvironmentSchema.
+export const VerifyDecisionOutcomeSchema = z.enum(["allow", "deny"]);
+export const VerifyDecisionModeSchema = z.enum(["monitor", "enforce"]);
+
 const DecisionBodySchema = z.object({
-  outcome: z.enum(["allow", "deny"]),
+  outcome: VerifyDecisionOutcomeSchema,
   effective: z.boolean(),
-  mode: z.enum(["monitor", "enforce"]),
+  mode: VerifyDecisionModeSchema,
   // Machine-readable, RP-facing. Must be sanitised before reaching the
   // subject — never surface an AML/sanctions reason to the agent or its
   // entity (tipping-off), the credential-facing message stays generic.
