@@ -375,9 +375,15 @@ jobs:
             echo "already_published=false" >> "$GITHUB_OUTPUT"
           fi
 
+      # Builds every workspace, not just --workspace=packages/credential-
+      # verification — this package's own tsc build needs contracts'
+      # built dist/index.d.ts to resolve its "@fence.dev/contracts"
+      # import (same reasoning as the `ci` job's own Build step above;
+      # this job hit the identical failure on its first real merge-to-main
+      # run, confirmed live, not just reasoned about).
       - name: Build
         if: steps.check.outputs.already_published == 'false'
-        run: npm run build --workspace=packages/credential-verification
+        run: npm run build
 
       - name: Publish to npm
         if: steps.check.outputs.already_published == 'false'
