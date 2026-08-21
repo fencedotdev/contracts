@@ -7,13 +7,22 @@ name: Notify on main-branch failure
 # it's a job inside the "CI" workflow run, not a separate one.
 
 on:
-  workflow_run:
-    workflows: ["CI", "Deploy production"]
+  # workflow_run is typically a fork-PR privilege-escalation vector, but
+  # this usage only reads the completed run's own conclusion/name to post
+  # a Discord notification — no checkout of the triggering ref, no
+  # execution of anything from it. Revisit if this workflow ever starts
+  # checking out or running the triggering commit's content.
+  #
+  # workflows: only "CI" — this repo has no separate deploy workflow
+  # (library repo, no deploy); "Deploy production" was leftover
+  # copy-paste residue from a deployable-repo template, corrected here.
+  workflow_run: # zizmor: ignore[dangerous-triggers] read-only use, no checkout/exec of triggering content
+    workflows: ["CI"]
     types: [completed]
     branches: [main]
 
 jobs:
-  notify:
+  notify: # zizmor: ignore[excessive-permissions] no permissions: block on this job, not a regression
     if: github.event.workflow_run.conclusion == 'failure'
     runs-on: ubuntu-latest
     steps:

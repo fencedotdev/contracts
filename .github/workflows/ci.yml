@@ -23,10 +23,12 @@ on:
 # the meantime, and ubuntu-latest's own genuine per-job isolation is strictly
 # safer than the doc-e-sign pool would have been, not just a stopgap.
 jobs:
-  ci:
+  ci: # zizmor: ignore[excessive-permissions] no permissions: block on this job, not a regression
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -97,14 +99,19 @@ jobs:
           advanced-security: "false"
           annotations: "true"
 
-      # Step 2 (0.3.3): fail on any type error.
+      # Step 2 (0.3.3): fail on any type error. Delegates to each package's
+      # own typecheck script (npm workspaces) — this repo restructured
+      # 2026-08-21 from a single package at the repo root into
+      # packages/*/, so there's no longer one root tsconfig to point
+      # `tsc` at directly.
       - name: Type check
-        run: npx tsc --noEmit
+        run: npm run typecheck
 
       - name: Lint
-        run: npx eslint . --max-warnings=0
+        run: npm run lint
 
-      # Step 3 (0.3.4): the placeholder test (0.2.3) must pass here.
+      # Step 3 (0.3.4): covers every package's tests in one vitest run —
+      # root vitest.config.ts globs packages/*/src/**/*.test.ts.
       - name: Test
         run: npm test -- --coverage
 
@@ -115,6 +122,15 @@ jobs:
   # `verification` three repos away. Split into three jobs so the gate is a
   # real dependency the publish job can't bypass, not just a step ordering
   # convention within one job.
+  #
+  # This whole pipeline still names contracts specifically (packages/
+  # contracts/, @fence.dev/contracts) rather than generically looping over
+  # packages/* — this repo restructured into an npm-workspaces monorepo
+  # 2026-08-21, but contracts is still the only package with a real
+  # consumer-verification gate to preserve. A second public package
+  # (credential-verification) that doesn't have consumer contract tests
+  # yet uses a simpler, ungated publish path — see that package's own
+  # notes when it's added.
   #
   # Publishes to the PUBLIC npm registry (registry.npmjs.org), not GitHub
   # Packages — a deliberate choice, decided 2026-07-31 after direct research
@@ -135,7 +151,7 @@ jobs:
   # itself was published manually to establish the package before Trusted
   # Publishing could be configured for v0.1.1 onward); see
   # fence-checklist-phase-0.md 0.3.7 for that trail.
-  build-and-pack:
+  build-and-pack: # zizmor: ignore[excessive-permissions] no permissions: block on this job, not a regression
     needs: ci
     if: github.ref == 'refs/heads/main' && github.event_name == 'push'
     runs-on: ubuntu-latest
@@ -144,6 +160,8 @@ jobs:
       already_published: ${{ steps.check.outputs.already_published }}
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -161,7 +179,7 @@ jobs:
       - name: Check whether this version is already published
         id: check
         run: |
-          VERSION=$(node -p "require('./package.json').version")
+          VERSION=$(node -p "require('./packages/contracts/package.json').version")
           echo "version=$VERSION" >> "$GITHUB_OUTPUT"
           if npm view "@fence.dev/contracts@$VERSION" version >/dev/null 2>&1; then
             echo "already_published=true" >> "$GITHUB_OUTPUT"
@@ -172,11 +190,11 @@ jobs:
 
       - name: Build
         if: steps.check.outputs.already_published == 'false'
-        run: npm run build
+        run: npm run build --workspace=packages/contracts
 
       - name: Pack
         if: steps.check.outputs.already_published == 'false'
-        run: npm pack
+        run: npm pack --workspace=packages/contracts --pack-destination .
 
       - name: Upload the packed tarball for the consumer-gate and publish jobs
         if: steps.check.outputs.already_published == 'false'
@@ -198,7 +216,7 @@ jobs:
   # skips cleanly (not a failure) if it isn't there yet. This gate starts
   # doing real verification automatically, with no further changes needed
   # here, the moment each repo's consumer-test PR merges.
-  verify-consumers:
+  verify-consumers: # zizmor: ignore[excessive-permissions] no permissions: block on this job, not a regression
     needs: build-and-pack
     if: needs.build-and-pack.outputs.already_published == 'false'
     runs-on: ubuntu-latest
@@ -225,6 +243,7 @@ jobs:
           repository: fencedotdev/${{ matrix.repo }}
           token: ${{ secrets.CROSS_REPO_READ_TOKEN }}
           path: consumer
+          persist-credentials: false
 
       - name: Run ${{ matrix.repo }}'s consumer contract test against the new build
         working-directory: consumer
@@ -246,6 +265,8 @@ jobs:
       id-token: write # required for npm's OIDC Trusted Publisher exchange + provenance
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
 
       - uses: actions/setup-node@820762786026740c76f36085b0efc47a31fe5020 # v7.0.0
         with:
@@ -267,17 +288,23 @@ jobs:
       # instead of chasing `@latest` would be more durable than repeating
       # this bump indefinitely.
       - name: Update npm
+        # zizmor: ignore[adhoc-packages] deliberate — npm's OIDC Trusted
+        # Publisher flow needs a recent npm, and the bundled Node version
+        # has drifted behind npm's engine requirement before (see comment
+        # above). A genuine, separately-worth-fixing gap (pin to a
+        # specific npm major instead of chasing @latest), out of scope
+        # for this restructuring PR.
         run: npm install -g npm@latest
 
       - name: Install dependencies
         run: npm ci
 
       - name: Build
-        run: npm run build
+        run: npm run build --workspace=packages/contracts
 
       # No NPM_TOKEN: npm exchanges this job's GitHub Actions OIDC token for
       # a short-lived publish credential via the Trusted Publisher config on
       # npmjs.com (fence-checklist-phase-0.md 0.3.7), and generates the
       # provenance attestation automatically as part of the same flow.
       - name: Publish to npm
-        run: npm publish --provenance
+        run: npm publish --provenance --workspace=packages/contracts
