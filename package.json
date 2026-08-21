@@ -1,36 +1,21 @@
 {
-  "name": "@fence.dev/contracts",
-  "version": "0.4.1",
-  "description": "Shared, versioned schemas for Fence's core contracts — the passport, mandate, verify() request, and verify() decision.",
+  "name": "packages",
+  "private": true,
+  "version": "0.0.0",
+  "description": "Public, versioned packages Fence publishes for third-party consumption and cross-repo reuse — the contracts schemas, and did:web/credential-verification logic. See CLAUDE.md for the public/private split rationale (internal-only shared code lives in a separate, private repo).",
   "type": "module",
   "engines": {
     "node": ">=24"
   },
-  "main": "./dist/index.js",
-  "types": "./dist/index.d.ts",
-  "exports": {
-    ".": {
-      "types": "./dist/index.d.ts",
-      "import": "./dist/index.js"
-    }
-  },
-  "files": [
-    "dist"
+  "workspaces": [
+    "packages/*"
   ],
-  "repository": {
-    "type": "git",
-    "url": "git+https://github.com/fencedotdev/contracts.git"
-  },
-  "publishConfig": {
-    "access": "public"
-  },
   "scripts": {
-    "build": "tsc -p tsconfig.build.json",
-    "typecheck": "tsc --noEmit",
+    "build": "npm run build --workspaces --if-present",
+    "typecheck": "npm run typecheck --workspaces --if-present",
     "lint": "eslint . --max-warnings=0",
     "test": "vitest run",
     "test:watch": "vitest",
-    "prepublishOnly": "npm run build",
     "prepare": "husky"
   },
   "devDependencies": {
@@ -42,8 +27,5 @@
     "typescript": "^5.5.0",
     "typescript-eslint": "^8.65.0",
     "vitest": "^4.0.0"
-  },
-  "dependencies": {
-    "zod": "^4.4.3"
   }
 }

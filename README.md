@@ -1,14 +1,13 @@
-# contracts
+# packages
 
-Owns the shared, versioned contracts every other repo imports — the passport, mandate, verify() request, and verify() decision shapes.
+Public, versioned packages Fence publishes — an npm-workspaces monorepo, renamed from `contracts` 2026-08-21 when this became a home for more than one package.
 
-## Owns
+## Packages
 
-the four M·1–M·4 shapes from the brief — the passport (SD-JWT-VC payload), the mandate, the `verify()` request, the `verify()` decision. This is the seam every other repo builds against (App. C).
+- **`packages/contracts`** (`@fence.dev/contracts`) — the shared, versioned schemas every other repo imports: the passport, mandate, `verify()` request, and `verify()` decision shapes (the M·1–M·4 seam, App. C).
+- More to follow — `credential-verification` (did:web/signature verification logic a relying party might want to audit) is next.
 
-## Does not own
-
-any business logic, any persistence, any HTTP handling — those all live in the consuming repos.
+**Why public:** these are the interoperability surface third parties build against. For genuinely internal-only shared code (used only by Fence's own services, never meant for a third party to see), see the separate, private `internal-packages` repo instead — see this repo's own `CLAUDE.md` for the full public/private split rationale.
 
 ## Reference
 

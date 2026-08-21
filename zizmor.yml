@@ -4,64 +4,26 @@
 # regression of either (or anything else zizmor checks) fails CI
 # immediately instead of waiting for the next external scan.
 #
-# Each entry below is a specific, already-triaged finding, scoped to its
-# exact file:line — not a blanket per-rule suppression — so this config
-# doesn't quietly swallow a *new* finding of the same rule somewhere else.
-# Same discipline as docs/audit-ci.jsonc's allowlist.
-rules:
-  artipacked:
-    ignore:
-      # actions/checkout not setting persist-credentials: false, across
-      # this file's four jobs (ci, build-and-pack, verify-consumers,
-      # publish). Low exposure: none of these jobs upload artifacts or
-      # run untrusted code that could exfiltrate the persisted credential.
-      #
-      # Line numbers shifted 2026-08-13 when the Semgrep step (old
-      # lines 41-51) was migrated off the archived semgrep-action to the
-      # CLI — everything from old line 52 on moved down by 30 lines.
-      # Recomputed from the exact diff, not by re-guessing off a fresh
-      # scan (that path is a trap: a finding not appearing in a scan run
-      # against the *old*, now-mismatched zizmor.yml just means it's
-      # still being suppressed by its stale entry, not that the rule
-      # stopped applying — confirmed the hard way while writing this).
-      - ci.yml:29
-      - ci.yml:146
-      - ci.yml:222
-      - ci.yml:248
-  excessive-permissions:
-    ignore:
-      # No explicit `permissions:` block, at the workflow level or on
-      # four individual jobs. Worth tightening eventually, not a
-      # regression of anything this tool was added to catch. Line numbers
-      # shifted 2026-08-13 — see the artipacked note above.
-      - ci.yml:1
-      - ci.yml:26
-      - ci.yml:138
-      - ci.yml:201
-      - notify-on-failure.yml:16
-  adhoc-packages:
-    ignore:
-      # publish job: `npm install -g npm@latest`, outside a lockfile-
-      # pinned install — deliberate, not a regression (see that step's
-      # own comment: npm's OIDC Trusted Publisher flow needs a recent
-      # npm, and the bundled Node version has drifted behind npm's engine
-      # requirement before). A genuine, separately-worth-fixing gap the
-      # step's own comment already names — pin to a specific npm major
-      # (e.g. npm@11) instead of chasing @latest — but that's a change to
-      # the live publish pipeline, out of scope here. Line number shifted
-      # 2026-08-13 (was ci.yml:240) — see the artipacked note above; the
-      # previous comment here ("npm pack... packing this repo's own
-      # output") described the wrong step entirely, corrected now.
-      - ci.yml:270
-  dangerous-triggers:
-    ignore:
-      # notify-on-failure.yml's workflow_run trigger — zizmor flags
-      # workflow_run as "almost always used insecurely" (typically a
-      # fork-PR privilege-escalation vector: the triggered workflow runs
-      # with the base repo's permissions/secrets against attacker-
-      # influenced content). This usage only reads the completed run's
-      # own conclusion/name to post a Discord notification — no checkout
-      # of the triggering ref, no execution of anything from it. Revisit
-      # if this workflow ever starts checking out or running the
-      # triggering commit's content.
-      - notify-on-failure.yml:9
+# Migrated 2026-08-21 from file:line suppressions here to inline
+# `# zizmor: ignore[rule-id]` comments at each flagged line, while
+# restructuring this repo into a monorepo (contracts -> packages) — the
+# file:line approach had already drifted twice by the time this
+# restructuring PR touched ci.yml (confirmed via a live `zizmor` run
+# before fixing), for exactly the reason identity-kyb hit this five times
+# over: any edit to a workflow file above a suppressed finding's line
+# shifts it and re-triggers CI failure on an already-triaged issue.
+# Inline comments travel with the line itself, so they can't drift out of
+# sync the same way. This file is kept (rather than deleted) as the
+# historical record of that decision — no active suppressions live here
+# anymore.
+#
+# Inline comment syntax, confirmed empirically against zizmor v1.29.0 —
+# the docs (docs.zizmor.sh/usage/#ignoring-findings) undersell this
+# precisely: `# zizmor: ignore[rule-id]` must be the FIRST thing in its
+# comment span, on the same line as the flagged key/step. A comment on
+# the line(s) *preceding* the flagged node is NOT reliably recognized.
+# Also doesn't work if any other text (e.g. an existing `# v1.2.3`
+# version-pin comment) precedes `zizmor:` within the same comment — put
+# the ignore token first and move any existing comment text after it
+# instead, e.g. `# zizmor: ignore[artipacked] low exposure (v7.0.1)`.
+rules: {}

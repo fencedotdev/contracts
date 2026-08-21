@@ -1,6 +1,6 @@
-# Fence — contracts
+# Fence — packages
 
-Owns the shared, versioned contracts every other repo imports — the passport, mandate, verify() request, and verify() decision shapes.
+Public, versioned packages Fence publishes for third-party consumption — renamed from `contracts` 2026-08-21 (npm-workspaces monorepo, one package per `packages/*/`) when this became a home for more than the original contract schemas.
 
 Full product brief: `../internal/briefs/260727_fence_id_v1.0.md`
 Build order: `../internal/checklists/fence-build-order.md`
@@ -10,51 +10,42 @@ How we work (stack + process): `../internal/onboarding/fence-team-brief-how-we-w
 
 **No `Co-Authored-By: Claude` or any AI attribution in commits or PRs.** Never add `Co-Authored-By:`, "Generated with Claude Code", or any AI tool attribution to a commit message or PR description.
 
-**No payment fields.** Nothing in this repo — schema, API shape, or dependency on `contracts` — may introduce a payment-shaped field (amounts tied to settlement, card/wallet references, anything beyond the generic `limits`/`value` shapes already in M·2/M·3) unless the brief's Prong 2 is explicitly and separately scoped. See `fence-build-order.md`, Critical architecture notes.
+**No payment fields.** Nothing in this repo — any package's schema or API shape — may introduce a payment-shaped field (amounts tied to settlement, card/wallet references, anything beyond the generic `limits`/`value` shapes already in `contracts`' M·2/M·3) unless the brief's Prong 2 is explicitly and separately scoped. See `fence-build-order.md`, Critical architecture notes.
 
 ---
 
-## contracts specifics
+## packages specifics
 
-**Type:** Library, no deploy — publishes a versioned package every other repo imports.
+**Type:** npm workspaces monorepo, no deploy — publishes one or more versioned public packages every consuming repo (and, for some packages, third parties) imports.
 
-**Stack:** TypeScript, Zod (or equivalent) for runtime-validated schemas + inferred types. No framework, no database, no HTTP server.
+**Stack:** TypeScript. Each package's own dependencies vary — `contracts` is pure Zod with zero runtime I/O; a package like `credential-verification` needs `jose` and network JWKS fetches. No framework, no database, no HTTP server anywhere in this repo.
 
-**Owns:** the four M·1–M·4 shapes from the brief — the passport (SD-JWT-VC payload), the mandate, the `verify()` request, the `verify()` decision. This is the seam every other repo builds against (App. C).
+**Why public — and why this is deliberately a separate repo from `internal-packages` (private):** the split is by audience, not by "is this shared code." A package belongs here only if a third party has a real reason to see or depend on it — the interoperability contract itself (`contracts`), or verification logic a relying party might want to audit rather than trust as a black box (`credential-verification`). Purely internal plumbing (e.g. the Supabase console-session JWT check used only by Fence's own three backend services) belongs in `internal-packages` instead — see that repo's own CLAUDE.md. This distinction was made explicit 2026-08-21 after this repo's public status (the only public repo in the org) was flagged as a real, actively-managed risk boundary in `fence-build-order.md` v1.24 — kept off the shared self-hosted CI runner pool specifically because of it. Check before adding a new package here: does a third party genuinely need to see this, or is it internal?
+
+**Structure:**
+```
+packages/
+  contracts/              # @fence.dev/contracts — the four M·1–M·4 shapes
+                          # from the brief: passport (SD-JWT-VC payload),
+                          # mandate, verify() request, verify() decision.
+                          # This is the seam every other repo builds
+                          # against (App. C).
+tsconfig.base.json         # shared compiler options every package's own
+                          # tsconfig.json extends
+eslint.config.mjs          # shared lint config, globs across packages/*/src
+vitest.config.ts           # shared test config, same glob
+```
 
 **Does not own:** any business logic, any persistence, any HTTP handling — those all live in the consuming repos.
 
-**Codebase structure (built 0.5.1–0.5.5; deviates from this doc's original sketch, see note below):**
-```
-src/
-  environment.ts         # live | test — shared by M·1 and M·4
-  assurance-level.ts     # unverified | full — shared by M·1, M·3, M·4
-  passport.ts            # M·1 — passport schema + types
-  mandate.ts             # M·2 — mandate/scope schema + types
-  verify-request.ts      # M·3
-  verify-decision.ts     # M·4 — includes a .refine() enforcing accountableOrigin
-                          # is never true for an unverified-tier decision
-  fixtures.ts            # one canonical instance per shape — imported by this
-                          # package's own tests AND by consumer contract tests
-                          # (0.5.6); exported from index.ts, not test-only
-  index.ts                # public exports
-  __tests__/
-    passport.test.ts / mandate.test.ts / verify-request.test.ts / verify-decision.test.ts
-    no-payment-fields.test.ts   # enforces the no-payment-fields rule (0.5.5) —
-                                  # walks each schema's JSON Schema representation
-                                  # (z.toJSONSchema) checking for banned field names
-    generic-limits.test.ts       # proves payment and API-quota limits share one shape (0.5.3)
-tsconfig.json          # typecheck (includes tests, matches the rest of the workspace)
-tsconfig.build.json     # build only — extends tsconfig.json, excludes *.test.ts
-```
-**Note on the deviation:** this doc originally sketched a top-level `test/` directory. Built against `vitest.config.ts`'s actual `include: ["src/**/*.test.ts"]` glob instead, colocating tests under `src/__tests__/` — matching every other repo's convention in this workspace, and keeping one test-discovery mechanism rather than two. `fixtures.ts` lives in `src/` and is a real public export (not test-only) specifically because 0.5.6 needs consuming repos to import these fixtures from the published package, which a `.npmignore`'d `test/` directory couldn't provide.
+**Publishing**: the public npm registry (`registry.npmjs.org`), via npm's Trusted Publisher/OIDC flow — no stored `NPM_TOKEN`. See `.github/workflows/ci.yml`'s own header comments for the full mechanism and for `contracts`' consumer-verification gate (0.5.6), which a new package here should get too once it has real downstream consumers with their own contract tests — until then, a simpler ungated publish path is fine, matching how `credential-verification` starts out.
 
-**Architecture invariants:**
-- No field anywhere in this package may be payment-shaped (no `funded`, no `payment` action type, no card/wallet reference) until Prong 2 is explicitly and separately scoped. This is enforced by `test/no-payment-fields.test.ts`, not just this instruction.
+**Architecture invariants (per `contracts` specifically):**
+- No field anywhere in `contracts` may be payment-shaped (no `funded`, no `payment` action type, no card/wallet reference) until Prong 2 is explicitly and separately scoped. Enforced by `packages/contracts/src/__tests__/no-payment-fields.test.ts`, not just this instruction.
 - `mandate.constraints.limits` is generic (`{ metric, unit, max }`) — a spend cap and an API quota are the same shape with different `metric` values. Never add a payment-specific limit type.
 - The mandate is *referenced* from the passport (`mandateRef`), never embedded — see M·1's design note.
 - `decision.outcome` (the honest verdict) and `decision.effective` (was it enforced) are separate fields — this is the enforcement-mode seam `grace` slots into later without a schema change.
-- A version bump here must pass the consumer-driven contract test suite against every consuming repo before it publishes (see `fence-checklist-phase-0.md` 0.3.7, 0.5.6).
+- A version bump to `contracts` must pass the consumer-driven contract test suite against every consuming repo before it publishes (see `fence-checklist-phase-0.md` 0.3.7, 0.5.6).
 
 **Domain vocabulary:** passport, mandate, `verify()`, claims, assurance level, outcome/effective, reason codes, environment (`live`/`test`).
 
@@ -78,7 +69,7 @@ TypeScript strict mode is enabled. All compiler errors are resolved — not sile
 2. Write minimum code to pass → confirm GREEN
 3. Refactor → commit
 
-Writing implementation before the test is not acceptable. 100% test coverage is mandatory and enforced in CI — a thin service is not an excuse for thin tests; in a repo this small, most of what exists *is* the product.
+Writing implementation before the test is not acceptable. 100% test coverage is mandatory and enforced in CI — a thin package is not an excuse for thin tests; in a repo this small, most of what exists *is* the product.
 
 ## Complexity limits (ESLint-enforced)
 
@@ -99,14 +90,15 @@ Banned folder names: `utils/`, `helpers/`, `common/`, `shared/`, `core/` — eve
 - Branch protection on `main`: no direct pushes, PR required, CI must pass
 - Signed commits required
 - No credentials in source code — GitHub secret scanning + push protection enabled; a `git-secrets` pre-commit hook blocks known secret patterns before they leave your machine
+- This repo is permanently excluded from the shared self-hosted CI runner pool (`fence-build-order.md` v1.24) — it's the only public repo in the org, and that pool is shared with the KMS-signing-key and DB-credential-holding repos.
 - If this repo ever touches the issuer signing key or IDV vendor credentials directly, stop — it almost certainly shouldn't. Signing happens only in `issuance`; KYB/KYC vendor calls happen only in `identity-kyb`. See `fence-team-brief-how-we-work.md` §8.
 
 ## Hooks
 
-An automatic code review runs after every Claude Code session in this repo. It reviews modified files against `.claude/automatic-code-review/rules.md` and reports convention violations before you see the result — including the no-payment-fields rule above where this repo touches `contracts` or `verify()` shapes. Do not bypass the reviewer.
+An automatic code review runs after every Claude Code session in this repo. It reviews modified files against `.claude/automatic-code-review/rules.md` and reports convention violations before you see the result — including the no-payment-fields rule above where a package here touches `contracts` or `verify()` shapes. Do not bypass the reviewer.
 
 The `PreToolUse` hook blocks `--no-verify`, `--force`, and `--hard` on git commands.
 
 ## MCP-first for third-party integrations
 
-Before hand-rolling a client for a vendor, check whether they publish an MCP server. Supabase is already connected in this workspace — use it for schema/migration/log work rather than raw `psql` or dashboard clicks. See `fence-team-brief-how-we-work.md` §7 for what's connected and what isn't (Sumsub has no known MCP server as of this writing — a thin typed client is the right call there).
+Before hand-rolling a client for a vendor, check whether they publish an MCP server. Supabase is already connected in this workspace — use it for schema/migration/log work rather than raw `psql` or dashboard clicks. See `fence-team-brief-how-we-work.md` §7 for what's connected and what isn't.
