@@ -7,7 +7,7 @@ import {
 import { importJWK } from "jose";
 import { webcrypto } from "node:crypto";
 import { gunzipSync } from "node:zlib";
-import { resolveDidWebVerificationMethod } from "./passport-signature-verification";
+import { resolveDidWebVerificationMethod } from "./passport-signature-verification.js";
 
 // Ported from verification/src/services/status-list-client.ts (2026-08-21,
 // external duplication review) — the offline, defense-in-depth revocation

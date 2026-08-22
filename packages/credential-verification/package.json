@@ -1,6 +1,6 @@
 {
   "name": "@fence.dev/credential-verification",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "description": "Verify a Fence-issued passport's signature and offline revocation status against Fence's published did:web keys — the same logic Fence's own verification service uses, independently auditable by a relying party.",
   "type": "module",
   "engines": {
